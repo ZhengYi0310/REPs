@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from validation import check_random_state
+from scaling import Scaling, NoScaling
 import numpy as np
 
 class UpperLevelPolicy(object):
@@ -8,7 +9,7 @@ class UpperLevelPolicy(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def __call__(self, context=None, explore=None):
+    def __call__(self, context=None, explore=True):
         """
         Policy evaluation
 
@@ -40,6 +41,46 @@ class UpperLevelPolicy(object):
     def transform_context(self, context):
         """Transform context based on internal context transformation. """
         return context  # no transformation as default
+
+class BoundedScalingPolicy(UpperLevelPolicy):
+    def __init__(self, upper_level_policy, scaling, bounds=None):
+        self.upper_level_policy = upper_level_policy
+
+        if scaling == "auto":
+            if bounds is None:
+                raise ValueError("scaling='auto' requires boundaries")
+            else:
+                covariance_diag = (bounds[:, 1] - bounds[:, 0]) ** 2 / 4.0
+                scaling = Scaling(covariance=covariance_diag,
+                                  compute_inverse=True)
+        elif scaling == "none" or scaling is None:
+            scaling = NoScaling()
+
+        self.scaling = scaling
+        self.bounds = bounds
+
+    def transform_context(self, context):
+        return self.upper_level_policy.transform_context(context)
+
+    @property
+    def W(self):
+        return self.upper_level_policy.W
+
+    @W.setter
+    def W(self, W):
+        self.upper_level_policy.W = W
+
+    def __call__(self, context=None, explore=True):
+        params = self.upper_level_policy(context, explore)
+        params = self.scaling.scale(params)
+        if self.bounds is not None:
+            np.clip(params, self.bounds[:, 0], self.bounds[:, 1], out=params)
+
+        return params
+
+    def fit(self, X, Y, weights=None, context_transform=True):
+        Y = self.scaling.inv_scale(Y.T).T
+        self.upper_level_policy.fit(X, Y, weights, context_transform)
 
 
 class ConstantGaussianPolicy(UpperLevelPolicy):

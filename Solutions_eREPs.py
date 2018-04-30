@@ -16,3 +16,15 @@ print mean * cov
 # xx, yy = np.meshgrid(np.linspace(-3, 3, m), np.linspace(-3, 3, n))
 # points = np.stack((xx, yy), axis=-1)
 # print points.shape
+import os
+import sys
+import logging
+from cStringIO import StringIO
+
+
+from collections import deque
+
+a = deque(maxlen=2)
+a.append(mean)
+a.append(cov)
+print a
