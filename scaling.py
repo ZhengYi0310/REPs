@@ -58,7 +58,7 @@ class Scaling(object):
             if self.compute_inverse:
                 self.inv_scaling_ /= self.variance
 
-        def scale(self, params):
+    def scale(self, params):
             """Scale variables.
                Transform from search space of the optimizer to parameter space.
                Parameters
@@ -72,7 +72,7 @@ class Scaling(object):
                 """
             return self.product_(self.scaling_, params)
 
-        def inv_scale(self, scaled_params):
+    def inv_scale(self, scaled_params):
             """Inverse scaling.
                 Transform from parameter space to the search space of the optimizer.
                 Parameters

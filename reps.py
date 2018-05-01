@@ -189,7 +189,7 @@ class REPSOptimizer(Optimizer):
         if self.it % self.train_freq == 0:
             theta = np.asarray(self.history_theta)
             R = np.asarray(self.history_R)
-            d = solve_dual_reps(R, self.epsilon, self.min_eta)
+            d = solve_dual_reps(R, self.epsilon, self.min_eta)[0]
             self.policy_.fit(None, theta, d)
 
         self.logger.info("Reward %.6f" % self.reward)

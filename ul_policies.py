@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from validation import check_random_state
 from scaling import Scaling, NoScaling
+from context_transformations import CONTEXT_TRANSFORMATIONS
 import numpy as np
 
 class UpperLevelPolicy(object):
@@ -82,6 +83,57 @@ class BoundedScalingPolicy(UpperLevelPolicy):
         Y = self.scaling.inv_scale(Y.T).T
         self.upper_level_policy.fit(X, Y, weights, context_transform)
 
+class ContextTransformationPolicy(UpperLevelPolicy):
+    """
+    A wrapper class around a policy which transform contexts
+    """
+    def __init__(self, PolicyClass, n_params, n_context_dims, context_transformation,
+                 *args, **kwargs):
+        """
+
+        :param PolicyClass: subclass of upper level policy, the class of the actual policy,
+                            which will be constructed internally
+        :param n_params: int, dimensionality of weight vector of the low level policy
+        :param n_context_dims: int, dimensionality of the context vector
+        :param context_transformation: string or callable (Nonelinear) transformation for the context
+        :param args:
+        :param kwargs:
+        """
+        self.context_transformation = context_transformation
+        if self.context_transformation is None:
+            self.ct = CONTEXT_TRANSFORMATIONS["affine"]
+        elif (isinstance(self.context_transformation, basestring) and
+                      self.context_transformation in CONTEXT_TRANSFORMATIONS):
+            self.ct = CONTEXT_TRANSFORMATIONS[self.context_transformation]
+        else:
+            self.ct = self.context_transformation
+
+        self.n_features = self.transform_context(np.zeros(n_context_dims)).shape[0]
+
+        # Create actual policy class to which all calls will be delegated after
+        # context transformation
+        self.policy = PolicyClass(n_params, self.n_features, *args, **kwargs)
+
+    @property
+    def W(self):
+        return self.W
+
+    @W.setter
+    def W(self, W):
+        self.policy.W = W
+
+
+    def transform_context(self, context):
+        return self.ct(context)
+
+    def __call__(self, context=None, explore=True):
+        context_features = self.transform_context(context)
+        self.policy(context_features, explore)
+
+    def fit(self, X, Y, weights=None, context_transform=True):
+        if context_transform:
+            X = np.array([self.transform_context(X[i]) for i in range(0, X.shape[0])])
+        self.policy.fit(X, Y, weights)
 
 class ConstantGaussianPolicy(UpperLevelPolicy):
     """
