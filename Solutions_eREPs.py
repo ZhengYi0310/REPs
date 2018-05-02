@@ -1,10 +1,17 @@
 import numpy as np
+from sklearn.preprocessing import PolynomialFeatures
+mean = np.array([[0, 2, 3]])
+poly = PolynomialFeatures(2)
+print np.stack([2, 2])
+print poly.fit_transform(mean)
+cov = np.array([[2, 0], [0, 100]])
+v, w = np.linalg.eig(cov)
+print np.dot(w, np.dot(np.diag(v), w.T))
 
-mean = np.array([0, 1])
-cov = np.array([[1, 0], [0, 100]])
-print cov[0, :].shape
-print np.linalg.inv(cov)
-print mean * cov
+np.fill_diagonal(cov, cov.diagonal() + 10)
+print cov
+print np.triu_indices(3, 0)
+
 
 # import matplotlib.pyplot as plt
 # a = np.random.RandomState(1234)

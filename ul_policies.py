@@ -83,6 +83,17 @@ class BoundedScalingPolicy(UpperLevelPolicy):
         Y = self.scaling.inv_scale(Y.T).T
         self.upper_level_policy.fit(X, Y, weights, context_transform)
 
+    def entroy(self):
+        return self.upper_level_policy.entropy()
+
+    @property
+    def get_mean(self):
+        return self.upper_level_policy.get_mean
+
+    @property
+    def get_sigma(self):
+        return self.upper_level_policy.get_sigma
+
 class ContextTransformationPolicy(UpperLevelPolicy):
     """
     A wrapper class around a policy which transform contexts
@@ -135,6 +146,17 @@ class ContextTransformationPolicy(UpperLevelPolicy):
             X = np.array([self.transform_context(X[i]) for i in range(0, X.shape[0])])
         self.policy.fit(X, Y, weights)
 
+    def entroy(self):
+        return self.policy.entropy()
+
+    @property
+    def get_mean(self):
+        return self.policy.get_mean
+
+    @property
+    def get_sigma(self):
+        return self.policy.get_sigma
+
 class ConstantGaussianPolicy(UpperLevelPolicy):
     """
     Gaussian policy with a constant mean
@@ -174,6 +196,19 @@ class ConstantGaussianPolicy(UpperLevelPolicy):
             return self.mean
         else:
             return self.random_state.multivariate_normal(self.mean, self.sigma, size=1)[0]
+
+    @property
+    def get_mean(self):
+        return self.mean
+
+    @property
+    def get_sigma(self):
+        return self.sigma
+
+    def fit_quad_surrogate(self, eta, omega, F, f, context_transform=True):
+        self.mean = np.dot(F, f)
+        self.sigma = F * (eta + omega)
+
 
     def fit(self, X, Y, weights, context_transform=True):
         """
@@ -218,6 +253,12 @@ class ConstantGaussianPolicy(UpperLevelPolicy):
         temp = np.exp(np.diag(temp))
         temp = temp / np.sqrt(np.linalg.det(np.pi * 2 * self.sigma))
         return temp
+
+    def entroy(self):
+        state_dim = self.mean.shape[0]
+        _, logcov = np.linalg.slogdet(self.sigma)
+        return 0.5 * (state_dim + state_dim * np.log(2 * np.pi) + logcov)
+
 
 class LinearGaussianPolicy(UpperLevelPolicy):
     """
